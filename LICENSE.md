@@ -7,6 +7,7 @@
 // multi-view geometric reliability in transparent object reconstruction.
 // Please cite the ReliableGS, TSGS, and PGSR papers if you use this software.
 // Details of PGSR's license can be found in the LICENSE_PGSR.md file.
+// Details of TSGS's license can be found in the LICENSE_TSGS.md file.
 // Permission to use, copy, modify and distribute this software and its  
 // documentation for educational, research and non-profit purposes only.  
 // Any modification based on this work must be open-source and prohibited  
