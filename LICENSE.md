@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////  
-// Copyright 2025 ReLER Lab, CCAI, Zhejiang University, Mingwei Li, Pu Pang, 
-// Hehe Fan, Hua Huang, Yi Yang, Zhejiang University, Zhongguancun Academy, 
-// Xi'an Jiaotong University, Beijing Normal University
+// Copyright 2026 Yongle Zhang, Yuhao Wang, Quan Zheng, 
+// Institute of Software, Chinese Academy of Sciences, 
+// University of Chinese Academy of Sciences.
 //
 // This work builds upon TSGS and PGSR and includes significant modifications for
 // multi-view geometric reliability in transparent object reconstruction.
