@@ -6,7 +6,7 @@ This repository contains the code for ReliableGS, a reliability-guided framework
 
 ### Prerequisites
 - Python 3.10+
-- CUDA 11.8+ (tested with CUDA 12.1)
+- CUDA 11.7+ (tested with CUDA 11.7)
 - PyTorch 2.0+ with CUDA support
 
 ### Installation
