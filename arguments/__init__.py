@@ -1,0 +1,212 @@
+#
+# Copyright (C) 2023, Inria
+# GRAPHDECO research group, https://team.inria.fr/graphdeco
+# All rights reserved.
+#
+# This software is free for non-commercial, research and evaluation use 
+# under the terms of the LICENSE.md file.
+#
+# For inquiries contact  george.drettakis@inria.fr
+#
+
+from argparse import ArgumentParser, Namespace
+import sys
+import os
+
+class GroupParams:
+    pass
+
+class ParamGroup:
+    def __init__(self, parser: ArgumentParser, name : str, fill_none = False):
+        group = parser.add_argument_group(name)
+        for key, value in vars(self).items():
+            shorthand = False
+            if key.startswith("_"):
+                shorthand = True
+                key = key[1:]
+            t = type(value)
+            value = value if not fill_none else None 
+            if shorthand:
+                if t == bool:
+                    group.add_argument("--" + key, ("-" + key[0:1]), default=value, action="store_true")
+                else:
+                    group.add_argument("--" + key, ("-" + key[0:1]), default=value, type=t)
+            else:
+                if t == bool:
+                    group.add_argument("--" + key, default=value, action="store_true")
+                else:
+                    group.add_argument("--" + key, default=value, type=t)
+
+    def extract(self, args):
+        group = GroupParams()
+        for arg in vars(args).items():
+            if arg[0] in vars(self) or ("_" + arg[0]) in vars(self):
+                setattr(group, arg[0], arg[1])
+        return group
+
+class ModelParams(ParamGroup): 
+    def __init__(self, parser, sentinel=False):
+        self.sh_degree = 3
+        self.asg_degree = 24
+        self._source_path = ""
+        self._model_path = ""
+        self._images = "images"
+        self._resolution = 2
+        self._white_background = False
+        self.data_device = "cuda"
+        self.eval = False
+        self.preload_img = True
+        self.ncc_scale = 1.0
+        self.multi_view_num = 8
+        self.multi_view_max_angle = 30
+        self.multi_view_min_dis = 0.01
+        self.multi_view_max_dis = 1.5
+        self._delight = False
+        self._normal = False
+        self.normal_folder = "normals"
+        self.mask_background = False
+        self.use_delighted_normal = False
+        self.use_transparencies_map = False
+        self.not_delight_only_transparent = False
+        # asg params
+        self.load2gpu_on_the_fly = False
+        self.is_real = False
+        self.is_indoor = False
+        self.add_val = False
+        super().__init__(parser, "Loading Parameters", sentinel)
+
+    def extract(self, args):
+        g = super().extract(args)
+        g.source_path = os.path.abspath(g.source_path)
+        return g
+
+class PipelineParams(ParamGroup):
+    def __init__(self, parser):
+        self.convert_SHs_python = False
+        self.compute_cov3D_python = False
+        self.debug = False
+        super().__init__(parser, "Pipeline Parameters")
+
+class OptimizationParams(ParamGroup):
+    def __init__(self, parser):
+        self.iterations = 30_000
+        self.position_lr_init = 0.00016
+        self.position_lr_final = 0.0000016
+        self.position_lr_delay_mult = 0.01
+        self.position_lr_max_steps = 30_000
+        self.specular_lr_max_steps = 30_000
+        self.feature_lr = 0.0025
+        self.opacity_lr = 0.05
+        self.scaling_lr = 0.005
+        self.rotation_lr = 0.001
+        self.percent_dense = 0.001
+        self.lambda_dssim = 0.2
+        self.densification_interval = 100
+        self.opacity_reset_interval = 3000
+        self.densify_from_iter = 500
+        self.densify_until_iter = 15_000
+        self.densify_grad_threshold = 0.0002
+        self.scale_loss_weight = 100.0
+        
+        self.wo_image_weight = False
+        self.single_view_weight = 0.015
+        self.single_view_weight_from_iter = 7000
+
+        self.use_virtul_cam = False
+        self.virtul_cam_prob = 0.5
+        self.use_multi_view_trim = True
+        self.multi_view_ncc_weight = 0.15
+        self.multi_view_geo_weight = 0.03
+        self.multi_view_weight_from_iter = 7000
+        self.multi_view_patch_size = 3
+        self.multi_view_sample_num = 102400
+        self.multi_view_pixel_noise_th = 1.0
+        self.wo_use_geo_occ_aware = False
+
+        self.opacity_cull_threshold = 0.005
+        self.densify_abs_grad_threshold = 0.0008
+        self.abs_split_radii2D_threshold = 20
+        self.max_abs_split_points = 50_000
+        self.max_all_points = 6000_000
+        self.exposure_compensation = False
+        self.random_background = False
+
+        self.wo_depth_normal_detach = False
+        self.use_2dgsnormal_loss = False
+        self.use_asg = False
+        self.delight_iterations = 15000
+        self.sd_normal_until_iter = 30000
+        self.lambda_sd_normal = 0.05
+        self.normal_cos_threshold_iter = 3000
+        self.ncc_loss_from_iter = 7000
+        # freeze optimizer
+        self.nofix_position = False
+        self.nofix_opacity = False
+        self.nofix_param = False
+        self.nofix_scaling = False
+        self.nofix_rotation = False
+        
+        # clear optimizer momentum
+        self.clear_f_dc = False
+        self.clear_f_rest = False
+        self.clear_opacity = False
+        self.clear_scaling = False
+        self.clear_rotation = False
+
+        self.T_threshold = 0.0001
+        self.observe_T_threshold = 0.5
+        self.bg_T_threshold = 0.98
+        self.trans_binary_threshold = 0.5
+
+
+        # ── Reliability Map (Innovation 1-3): Multi-view statistics approach ──
+        self.use_reliability = False
+        self.reliability_K = 5                    # number of neighbor views
+        self.reliability_tau_d = 0.5              # exp(-noise/tau_d) depth temperature
+        self.reliability_tau_n = 0.5              # exp(-err/tau_n) normal temperature
+        self.reliability_update_every = 500       # recompute every N iterations
+        self.reliability_start_iter = 3000        # first iter to compute stats
+        self.reliability_use_from_iter = 7000     # first iter to USE reliability weights
+        self.reliability_pixel_noise_th = 30.0    # upper clamp for pixel_noise
+        self.reliability_no_densify_modulate = False  # disable densify modulation
+        self.reliability_adaptive_tau = False      # enable adaptive tau (quantile-based)
+        self.reliability_tau_quantile = 0.75       # quantile for adaptive tau
+        self.reliability_tau_alpha = 1.0           # scaling factor for adaptive tau
+        self.reliability_tau_d_floor = 0.1         # floor for adaptive tau_d
+        self.reliability_tau_n_floor = 0.05        # floor for adaptive tau_n
+        self.reliability_use_nearest_depth = False   # use min-Gaussian depth (NOT first-surface) instead of plane_depth
+        self.reliability_use_transparency_depth = False  # Plan B: blend transparency_depth for transparent pixels
+        self.reliability_no_loss_modulate = False  # disable loss modulation (R-map compute only)
+        self.reliability_staged_update = False     # staged update interval schedule
+        self.reliability_floater_rel_th = 0.1      # floater pruning reliability threshold
+        self.reliability_floater_opacity_th = 0.5  # floater pruning opacity threshold
+
+        # ── Multi-view normal consistency (MND-GS style) ──
+        self.use_mv_normal_consistency = False
+        self.mv_normal_weight = 0.03
+        self.mv_normal_max_samples = 102400
+        self.mv_normal_loss_type = "l1"
+        
+        super().__init__(parser, "Optimization Parameters")
+
+def get_combined_args(parser : ArgumentParser):
+    cmdlne_string = sys.argv[1:]
+    cfgfile_string = "Namespace()"
+    args_cmdline = parser.parse_args(cmdlne_string)
+
+    try:
+        cfgfilepath = os.path.join(args_cmdline.model_path, "cfg_args")
+        print("Looking for config file in", cfgfilepath)
+        with open(cfgfilepath) as cfg_file:
+            print("Config file found: {}".format(cfgfilepath))
+            cfgfile_string = cfg_file.read()
+    except TypeError:
+        print("Config file not found at")
+        pass
+    args_cfgfile = eval(cfgfile_string)
+
+    merged_dict = vars(args_cfgfile).copy()
+    for k,v in vars(args_cmdline).items():
+        if v != None:
+            merged_dict[k] = v
+    return Namespace(**merged_dict)
