@@ -1,4 +1,4 @@
-# ReliableGS: Multi-View Geometric Reliability for Transparent Object Gaussian Splatting
+# ReliableGS: Geometric Reliability-Regularized Gaussian Splatting for Transparent Surface Reconstruction
 
 This repository contains the code for ReliableGS, a reliability-guided framework for transparent object reconstruction built upon 3D Gaussian Splatting.
 
